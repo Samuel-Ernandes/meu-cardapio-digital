@@ -20,6 +20,11 @@ export function AppNavigation() {
           component={CategoriaProduto}
           options={({ route }) => ({title: route.params.categoria.toUpperCase()})}
         />
+        <Stack.Screen
+          name="Produto"
+          component={ProductDetailScreen}
+          options={({ route }) => ({ title: route.params.product.nome })}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

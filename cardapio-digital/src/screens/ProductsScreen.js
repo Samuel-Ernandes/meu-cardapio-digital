@@ -1,5 +1,4 @@
-// src/screens/ProductsScreen.js
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   SafeAreaView,
   View,
@@ -9,14 +8,26 @@ import {
   RefreshControl,
   StyleSheet,
   Button,
+  TextInput,
 } from 'react-native';
 import { useProducts } from '../hooks/useProducts';
 import ProductCard from '../components/ProductCard';
 
-export default function ProductsScreen() {
+export default function ProductsScreen({ navigation }) {
   const { items, loading, error, reload } = useProducts();
+  const [query, setQuery] = useState('');
 
-  // Carregamento inicial
+  const filteredItems = useMemo(() => {
+    if (!query) return items;
+    const q = query.toLowerCase();
+    return items.filter(
+      (p) =>
+        p.nome.toLowerCase().includes(q) ||
+        String(p.preco).includes(q) ||
+        p.categoria.toLowerCase().includes(q)
+    );
+  }, [items, query]);
+
   if (loading && items.length === 0) {
     return (
       <SafeAreaView style={styles.containerCenter}>
@@ -26,28 +37,6 @@ export default function ProductsScreen() {
     );
   }
 
-  // Erro inicial (sem dados)
-  if (error && items.length === 0) {
-    return (
-      <SafeAreaView style={styles.containerCenter}>
-        <Text style={[styles.infoText, { color: 'red', textAlign: 'center' }]}>
-          {error}
-        </Text>
-
-        <View style={{ height: 12 }} />
-        <Button title="Tentar novamente" onPress={reload} />
-
-        <View style={{ height: 12 }} />
-        <Text style={styles.hint}>
-          Verifique o API_URL em <Text style={styles.code}>src/data/config.js</Text>{' '}
-          e teste a rota <Text style={styles.code}>/products</Text> no navegador do
-          emulador/celular.
-        </Text>
-      </SafeAreaView>
-    );
-  }
-
-  // Lista de produtos
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -55,23 +44,28 @@ export default function ProductsScreen() {
         <Button title="Recarregar" onPress={reload} />
       </View>
 
-      {/* Se houver erro durante um refresh, mas já temos dados, mostra um aviso */}
-      {!!error && items.length > 0 && (
-        <View style={styles.bannerError}>
-          <Text style={styles.bannerErrorText}>{error}</Text>
-        </View>
-      )}
+      <TextInput
+        style={styles.search}
+        placeholder="Buscar por nome, preço ou categoria"
+        value={query}
+        onChangeText={setQuery}
+      />
 
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <ProductCard product={item} />}
+        renderItem={({ item }) => (
+          <ProductCard
+            product={item}
+            onPress={() => navigation.navigate('Produto', { product: item })}
+          />
+        )}
         contentContainerStyle={
-          items.length === 0 ? styles.listEmpty : styles.list
+          filteredItems.length === 0 ? styles.listEmpty : styles.list
         }
         ListEmptyComponent={
           <View style={{ alignItems: 'center', padding: 24 }}>
-            <Text>Nenhum produto cadastrado.</Text>
+            <Text>Nenhum produto encontrado.</Text>
           </View>
         }
         refreshControl={
@@ -83,38 +77,25 @@ export default function ProductsScreen() {
 }
 
 const styles = StyleSheet.create({
-  containerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: '#f7f7f7',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#f7f7f7',
-  },
+  container: { flex: 1, backgroundColor: '#f7f7f7' },
+  containerCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: { fontSize: 20, fontWeight: '700' },
+  search: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
   list: { paddingBottom: 16 },
   listEmpty: { flexGrow: 1, justifyContent: 'center' },
   infoText: { marginTop: 10, fontSize: 14 },
-  hint: { fontSize: 12, color: '#555', textAlign: 'center' },
-  code: { fontFamily: 'monospace' },
-  bannerError: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 8,
-    backgroundColor: '#ffe6e6',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ffcccc',
-  },
-  bannerErrorText: { color: '#b30000', fontSize: 12 },
 });
